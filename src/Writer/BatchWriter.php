@@ -9,12 +9,25 @@ use Ddeboer\DataImport\Writer;
  */
 class BatchWriter implements Writer
 {
-    private $delegate;
+    /**
+     * @var Writer
+     */
+    protected $delegate;
 
-    private $size;
+    /**
+     * @var int
+     */
+    protected $size;
 
-    private $queue;
+    /**
+     * @var \SplQueue
+     */
+    protected $queue;
 
+    /**
+     * @param Writer $delegate
+     * @param int $size
+     */
     public function __construct(Writer $delegate, $size = 20)
     {
         $this->delegate = $delegate;
@@ -28,13 +41,17 @@ class BatchWriter implements Writer
         $this->queue = new \SplQueue();
     }
 
+    /**
+     * @param array $item
+     */
     public function writeItem(array $item)
     {
-        $this->queue->push($item);
+        $this->queue->enqueue($item);
 
         if (count($this->queue) >= $this->size) {
             $this->flush();
         }
+
     }
 
     public function finish()
@@ -44,10 +61,10 @@ class BatchWriter implements Writer
         $this->delegate->finish();
     }
 
-    private function flush()
+    protected function flush()
     {
-        foreach ($this->queue as $item) {
-            $this->delegate->writeItem($item);
+        while (!$this->queue->isEmpty()) {
+            $this->delegate->writeItem($this->queue->dequeue());
         }
 
         if ($this->delegate instanceof FlushableWriter) {
